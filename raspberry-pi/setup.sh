@@ -101,8 +101,16 @@ fi
 
 # ── Deploy Chronomoto ──────────────────────────────────────────────────────────
 if [[ -d "$INSTALL_DIR/.git" ]]; then
-  log "Updating existing install at $INSTALL_DIR..."
-  git -C "$INSTALL_DIR" pull --ff-only origin main || git -C "$INSTALL_DIR" pull --ff-only
+  log "Existing git checkout found at $INSTALL_DIR"
+  # If there are local modifications, back up and clone fresh to avoid merge conflicts
+  if [[ -n "$(git -C "$INSTALL_DIR" status --porcelain)" ]]; then
+    log "Local changes detected in $INSTALL_DIR — backing up and cloning fresh"
+    mv "$INSTALL_DIR" "${INSTALL_DIR}.bak.$(date +%s)"
+    git clone --depth 1 "$REPO_URL" "$INSTALL_DIR"
+  else
+    log "Updating existing install at $INSTALL_DIR..."
+    git -C "$INSTALL_DIR" pull --ff-only origin main || git -C "$INSTALL_DIR" pull --ff-only || true
+  fi
 elif [[ -d "$INSTALL_DIR" ]]; then
   log "Backing up $INSTALL_DIR and cloning fresh..."
   mv "$INSTALL_DIR" "${INSTALL_DIR}.bak.$(date +%s)"
