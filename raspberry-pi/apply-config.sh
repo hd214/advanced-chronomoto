@@ -4,7 +4,7 @@
 
 set -euo pipefail
 
-INSTALL_DIR="${1:?INSTALL_DIR required}"
+INSTALL_DIR="${1:-${INSTALL_DIR:-/opt/advanced-chronomoto}}"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CONFIG_FILE="${CONFIG_FILE:-$SCRIPT_DIR/chronomoto.conf}"
