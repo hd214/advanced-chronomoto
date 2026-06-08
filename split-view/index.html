@@ -263,7 +263,7 @@
   <button class="action-btn" data-reload="top">↺</button>
   <button class="action-btn" data-open="top">↗ open</button>
   <div class="divider-v"></div>
-  <span class="badge badge-archive">ARCHIVE</span>
+  <span class="badge badge-archive" id="archive-badge">ARCHIVE</span>
   <span class="panel-url" id="url-bottom">live.chronomoto.com/archive</span>
   <button class="action-btn" data-reload="bottom">↺</button>
   <button class="action-btn" data-open="bottom">↗ open</button>
@@ -311,12 +311,23 @@
 
 <div id="drag-overlay"></div>
 
+<script src="config.js"></script>
 <script>
-  /* ── CONFIG ── */
-  const TOP_URL         = 'https://live.chronomoto.com/mx/';
-  const BOTTOM_URL      = 'https://live.chronomoto.com/archive';
-  const DEFAULT_SPLIT   = 60; // default top panel percentage
-  /* ─────────── */
+  /* ── CONFIG (defaults; overridden by split-view/config.js on Pi) ── */
+  const CFG = Object.assign({
+    topUrl: 'https://live.chronomoto.com/mx/',
+    bottomUrl: 'https://live.chronomoto.com/archive',
+    archiveTitle: 'ARCHIVE',
+    defaultSplit: 60,
+  }, window.CHRONOMOTO_SPLIT_CONFIG || {});
+
+  const TOP_URL       = CFG.topUrl;
+  const BOTTOM_URL    = CFG.bottomUrl;
+  const DEFAULT_SPLIT = CFG.defaultSplit;
+  /* ───────────────────────────────────────────────────────────────── */
+
+  const archiveBadge = document.getElementById('archive-badge');
+  if (archiveBadge && CFG.archiveTitle) archiveBadge.textContent = CFG.archiveTitle;
 
   document.getElementById('iframe-top').src    = TOP_URL;
   document.getElementById('iframe-bottom').src = BOTTOM_URL;

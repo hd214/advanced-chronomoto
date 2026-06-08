@@ -1,0 +1,20 @@
+[Unit]
+Description=Chronomoto split-view kiosk (Chromium fullscreen)
+After=graphical.target network-online.target
+Wants=network-online.target
+# Wait for desktop session / display manager
+After=display-manager.service
+
+[Service]
+Type=simple
+User=__KIOSK_USER__
+Group=__KIOSK_USER__
+Environment=DISPLAY=:0
+Environment=XAUTHORITY=/home/__KIOSK_USER__/.Xauthority
+WorkingDirectory=/opt/advanced-chronomoto
+ExecStart=/opt/advanced-chronomoto/raspberry-pi/kiosk.sh
+Restart=on-failure
+RestartSec=15
+
+[Install]
+WantedBy=graphical.target

@@ -1,0 +1,7 @@
+// Copy to config.js and edit, or let raspberry-pi/setup.sh generate it.
+window.CHRONOMOTO_SPLIT_CONFIG = {
+  topUrl: 'https://live.chronomoto.com/mx/',
+  bottomUrl: 'https://live.chronomoto.com/archive',
+  archiveTitle: 'ARCHIVE',
+  defaultSplit: 60,
+};

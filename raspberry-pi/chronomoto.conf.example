@@ -1,0 +1,20 @@
+# Chronomoto Pi kiosk configuration
+# Copy to chronomoto.conf and edit before running setup.sh:
+#   cp chronomoto.conf.example chronomoto.conf
+#
+# Or pass the same names as environment variables to setup.sh.
+
+# Rider number to highlight in the live timing iframe (leave empty to disable)
+HIGHLIGHT_NO=214
+
+# Top panel: live timing URL
+TOP_URL=https://live.chronomoto.com/mx/
+
+# Bottom panel: archive URL
+BOTTOM_URL=https://live.chronomoto.com/archive
+
+# Label shown on the archive badge in the split-view top bar
+ARCHIVE_TITLE=ARCHIVE
+
+# Default top/bottom split ratio (percent for top panel)
+DEFAULT_SPLIT=60

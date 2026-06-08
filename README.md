@@ -9,6 +9,18 @@ Browser tools for [live.chronomoto.com](https://live.chronomoto.com) — row hig
 | **Row Highlighter** | Userscript | Highlights a rider row by number; click any No. cell to select |
 | **Archiver** | Userscript | Saves final results when a race finishes; dashboard + CSV export at `/archive` |
 | **Split View** | Web page | Live timing (top) + archive (bottom) in one resizable window |
+| **Pi Kiosk** | Setup script | Fullscreen split view on a Raspberry Pi after boot |
+
+## Raspberry Pi kiosk
+
+Run Chronomoto split view fullscreen on a Pi (Chromium kiosk, auto-starts 5s after desktop boot):
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/hd214/advanced-chronomoto/main/raspberry-pi/setup.sh | sudo bash
+sudo reboot
+```
+
+See **[raspberry-pi/README.md](raspberry-pi/README.md)** for configuration, autologin, and troubleshooting.
 
 ## Quick install (recommended)
 
@@ -138,6 +150,10 @@ To update manually, open the install page and click **Install with Tampermonkey*
 advanced-chronomoto/
 ├── README.md
 ├── install.html                         # one-click installer
+├── raspberry-pi/
+│   ├── setup.sh                         # Pi: update, install Chromium, kiosk
+│   ├── kiosk.sh                         # Chromium fullscreen launcher
+│   └── chronomoto-kiosk.service         # systemd unit
 ├── split-view/
 │   └── index.html                       # live + archive split view
 └── userscripts/
