@@ -522,45 +522,19 @@
   // save event is received from the archive/top frame. This prevents flashing.
   applyLayout(DEFAULT_SPLIT);
 
-  // Listen for archiver events from the archive iframe and refresh bottom iframe
-  // 2s after an archive is saved to allow the archive page to stabilise.
-  window.addEventListener('message', (ev) => {
+  // Periodic refresh for the bottom iframe only (every 5 minutes).
+  // This restores the simple refresher behavior and avoids message-driven
+  // polling or frequent reloads that caused flashing.
+  (function enableArchiveAutoRefresh() {
+    const ARCHIVE_REFRESH_MS = 5 * 60 * 1000; // 5 minutes
     try {
-      const d = ev.data || {};
-      if (d && d.type === 'chronomoto:archived') {
-        // When archive saved, poll the archive URL until it returns 200,
-        // then reload the bottom iframe once. This prevents swapping to
-        // a transient 404/blank page.
-        (async function waitThenReload() {
-          const url = document.getElementById('iframe-bottom')?.src || '';
-          if (!url) return;
-          const maxWait = 15000; // ms total wait
-          const interval = 1000; // ms between tries
-          const start = Date.now();
-          let ok = false;
-          while (Date.now() - start < maxWait) {
-            try {
-              const controller = new AbortController();
-              const timeout = setTimeout(() => controller.abort(), 3000);
-              // try CORS fetch; if server doesn't allow CORS this will throw
-              const res = await fetch(url, { method: 'GET', cache: 'no-store', signal: controller.signal, mode: 'cors' });
-              clearTimeout(timeout);
-              if (res && res.ok) { ok = true; break; }
-            } catch (e) {
-              // fetch failed or timed out; continue retrying
-            }
-            await new Promise(r => setTimeout(r, interval));
-          }
-          if (ok) {
-            try { reloadFrame('bottom'); } catch (e) { /* ignore */ }
-          } else {
-            // as a last resort, do a single reload attempt after delay
-            setTimeout(() => { try { reloadFrame('bottom'); } catch (e) {} }, 2000);
-          }
-        })();
-      }
-    } catch (e) {}
-  }, false);
+      setInterval(() => {
+        try { reloadFrame('bottom'); } catch (e) { /* ignore */ }
+      }, ARCHIVE_REFRESH_MS);
+    } catch (e) {
+      console.warn('Archive auto-refresh unavailable', e);
+    }
+  })();
 </script>
 </body>
 </html>
