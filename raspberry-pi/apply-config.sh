@@ -90,12 +90,13 @@ if (( ${#all_js[@]} )); then
   "description": "Highlight + userscripts for Chronomoto kiosk",
   "content_scripts": [
     {
-      "matches": ["https://live.chronomoto.com/*"],
+      "matches": ["*://live.chronomoto.com/*"],
       "js": [ $js_list ],
       "run_at": "document_idle",
-      "all_frames": false
+      "all_frames": true
     }
-  ]
+  ],
+  "host_permissions": ["*://live.chronomoto.com/*"]
 }
 EOF
   log "Built combined extension with ${#all_js[@]} script(s) -> $EXT_OUT"
