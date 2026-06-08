@@ -137,6 +137,9 @@ chmod +x "$INSTALL_DIR/raspberry-pi/kiosk.sh" \
 
 # Apply TOP_URL, ARCHIVE_TITLE, HIGHLIGHT_NO, etc. to split-view + extension
 export HIGHLIGHT_NO TOP_URL BOTTOM_URL ARCHIVE_TITLE DEFAULT_SPLIT
+# Export filter settings so apply-config can write defaults into the extension
+export CHRONOMOTO_FILTER_ENABLED="${CHRONOMOTO_FILTER_ENABLED:-}"
+export CHRONOMOTO_FILTER_TEXT="${CHRONOMOTO_FILTER_TEXT:-}"
 bash "$INSTALL_DIR/raspberry-pi/apply-config.sh" "$INSTALL_DIR"
 
 # Attempt to download and unpack Tampermonkey into extension-built (optional)
@@ -168,6 +171,8 @@ CHRONOMOTO_TOP_URL=$TOP_URL
 CHRONOMOTO_BOTTOM_URL=$BOTTOM_URL
 CHRONOMOTO_ARCHIVE_TITLE=$ARCHIVE_TITLE
 CHRONOMOTO_DEFAULT_SPLIT=$DEFAULT_SPLIT
+CHRONOMOTO_FILTER_ENABLED=${CHRONOMOTO_FILTER_ENABLED:-}
+CHRONOMOTO_FILTER_TEXT=${CHRONOMOTO_FILTER_TEXT:-}
 # CHRONOMOTO_KIOSK_URL=https://hd214.github.io/advanced-chronomoto/split-view/index.html
 EOF
 

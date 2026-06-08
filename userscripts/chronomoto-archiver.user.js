@@ -25,17 +25,37 @@
   const path        = window.location.pathname;
 
   // CONFIG — edit this line after install
-  const FILTER_TEXT = '';       // e.g. 'YT125 2T' — leave empty to save all races
+  // Note: at runtime this can be overridden by localStorage key
+  // `chronomoto_filter_text` or by `cm-defaults.js` created during setup.
+  const FILTER_TEXT = (function(){
+    try {
+      const v = (typeof window.CHRONOMOTO_FILTER_TEXT !== 'undefined') ? window.CHRONOMOTO_FILTER_TEXT : null;
+      if (v) return v;
+      const ls = (typeof localStorage !== 'undefined') ? localStorage.getItem('chronomoto_filter_text') : null;
+      if (ls) return ls;
+    } catch (e) {}
+    return '';
+  })();       // e.g. 'YT125 2T' — leave empty to save all races
 
   const FILTER_KEY  = 'chronomoto_filter_enabled';
-  let   filterEnabled = GM_getValue(FILTER_KEY, 'false') === 'true';
+  // Compatibility: prefer Greasemonkey/Tampermonkey storage if available,
+  // otherwise fall back to localStorage so content-script builds work too.
+  function gmGet(key, fallback) {
+    try { if (typeof GM_getValue === 'function') return GM_getValue(key, fallback); } catch (e) {}
+    try { const v = localStorage.getItem(key); return v === null ? fallback : v; } catch (e) { return fallback; }
+  }
+  function gmSet(key, val) {
+    try { if (typeof GM_setValue === 'function') return GM_setValue(key, val); } catch (e) {}
+    try { localStorage.setItem(key, val); } catch (e) {}
+  }
+  let filterEnabled = (gmGet(FILTER_KEY, 'false') === 'true');
 
   function loadArchives() {
-    try { return JSON.parse(GM_getValue(STORAGE_KEY, '[]')); }
+    try { return JSON.parse(gmGet(STORAGE_KEY, '[]')); }
     catch { return []; }
   }
   function saveArchives(arr) {
-    GM_setValue(STORAGE_KEY, JSON.stringify(arr));
+    gmSet(STORAGE_KEY, JSON.stringify(arr));
   }
 
   function scrapeCategory() {

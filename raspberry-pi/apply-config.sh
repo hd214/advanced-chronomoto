@@ -107,4 +107,38 @@ fi
 
 shopt -u nullglob
 
+# Write small defaults script to set localStorage-based filter flags
+# This lets the archiver pick up enabled filter state when running as
+# a plain content script (without Tampermonkey GM APIs).
+DEF_ENABLED="${CHRONOMOTO_FILTER_ENABLED:-}"
+DEF_TEXT="${CHRONOMOTO_FILTER_TEXT:-}"
+if [[ -n "$DEF_ENABLED" || -n "$DEF_TEXT" ]]; then
+  mkdir -p "$EXT_OUT"
+  cat > "$EXT_OUT/cm-defaults.js" << JS
+try {
+  ${DEF_ENABLED:+localStorage.setItem('chronomoto_filter_enabled', 'true');}
+  ${DEF_TEXT:+localStorage.setItem('chronomoto_filter_text', '$(js_str "$DEF_TEXT")');}
+} catch (e) {}
+JS
+  # Ensure defaults script runs first by rewriting manifest to include it
+  if [[ -f "$EXT_OUT/manifest.json" ]]; then
+    # inject cm-defaults.js at front of content scripts list
+    manifest=$(cat "$EXT_OUT/manifest.json")
+    # Simple jq-less injection: prepend "cm-defaults.js" to js array
+    sed -i 's/"js": \[ /"js": [ "cm-defaults.js", /' "$EXT_OUT/manifest.json" || true
+  else
+    # create a minimal manifest if not present
+    cat > "$EXT_OUT/manifest.json" << EOF
+{
+  "manifest_version": 3,
+  "name": "Chronomoto Kiosk Defaults",
+  "version": "1.0",
+  "content_scripts": [ { "matches": ["*://live.chronomoto.com/*"], "js": ["cm-defaults.js"], "run_at": "document_start", "all_frames": true } ],
+  "host_permissions": ["*://live.chronomoto.com/*"]
+}
+EOF
+  fi
+  log "Wrote extension defaults (filter) -> $EXT_OUT/cm-defaults.js"
+fi
+
 log "Configuration applied."
