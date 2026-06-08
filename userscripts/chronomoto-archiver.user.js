@@ -13,6 +13,7 @@
 // @homepageURL  https://github.com/hd214/advanced-chronomoto
 // @updateURL    https://raw.githubusercontent.com/hd214/advanced-chronomoto/main/userscripts/chronomoto-archiver.user.js
 // @downloadURL  https://raw.githubusercontent.com/hd214/advanced-chronomoto/main/userscripts/chronomoto-archiver.user.js
+// @license      GPL-3.0-or-later
 // ==/UserScript==
 
 (function () {

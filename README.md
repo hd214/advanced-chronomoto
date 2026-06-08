@@ -147,4 +147,8 @@ advanced-chronomoto/
 
 ## License
 
-Use and modify freely. Not affiliated with Chronomoto / live.chronomoto.com.
+Copyright (C) 2026 hd214
+
+This project is licensed under the [GNU General Public License v3.0](LICENSE).
+
+Not affiliated with Chronomoto / live.chronomoto.com.
