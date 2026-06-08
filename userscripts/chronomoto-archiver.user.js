@@ -186,6 +186,12 @@
 
     showToast('✅ Saved: ' + category);
     console.log('[Chronomoto Archiver] Saved:', entry);
+    try {
+      // Notify parent/split-view to refresh after a short delay
+      if (window && window.top && window.top !== window) {
+        window.top.postMessage({ type: 'chronomoto:archived', timestamp: Date.now(), category }, '*');
+      }
+    } catch (e) {}
   }
 
   function showToast(msg) {

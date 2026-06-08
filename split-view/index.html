@@ -443,12 +443,26 @@
     try {
       const src = iframe.src;
       const hidden = document.createElement('iframe');
-      hidden.style.display = 'none';
+      // keep hidden iframe in the DOM but invisible while it loads
+      hidden.style.display = 'block';
       hidden.style.visibility = 'hidden';
+      hidden.style.position = 'absolute';
+      hidden.style.left = '-9999px';
+      hidden.style.top = '0';
       hidden.width = iframe.width || '100%';
       hidden.height = iframe.height || iframe.style.height || '100%';
       hidden.setAttribute('title', iframe.getAttribute('title') || '');
       hidden.src = src;
+
+      // Immediately show a dark placeholder in the visible iframe to mask white flash
+      try {
+        const darkHtml = '<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head><body style="margin:0;background:#0b0d14"></body></html>';
+        const dataUrl = 'data:text/html;charset=utf-8,' + encodeURIComponent(darkHtml);
+        // only set placeholder for bottom iframe to preserve top live view
+        if (which === 'bottom') {
+          try { iframe.src = dataUrl; } catch (_) {}
+        }
+      } catch (_) {}
 
       let swapped = false;
       hidden.addEventListener('load', () => {
@@ -465,8 +479,11 @@
           hidden.id = 'iframe-' + which;
           hidden.onload = () => frameLoaded(which);
           // Make the swapped iframe visible and sized like the original
-          hidden.style.display = '';
+          hidden.style.display = 'block';
           hidden.style.visibility = 'visible';
+          hidden.style.position = '';
+          hidden.style.left = '';
+          hidden.style.top = '';
           hidden.style.width = '100%';
           hidden.style.height = iframe.style.height || iframe.getAttribute('height') || '100%';
           hidden.style.transform = 'none';
@@ -513,6 +530,20 @@
   })();
 
   applyLayout(DEFAULT_SPLIT);
+
+  // Listen for archiver events from the archive iframe and refresh bottom iframe
+  // 2s after an archive is saved to allow the archive page to stabilise.
+  window.addEventListener('message', (ev) => {
+    try {
+      const d = ev.data || {};
+      if (d && d.type === 'chronomoto:archived') {
+        // schedule a delayed reload of the bottom frame
+        setTimeout(() => {
+          try { reloadFrame('bottom'); } catch (e) { /* ignore */ }
+        }, 2000);
+      }
+    } catch (e) {}
+  }, false);
 </script>
 </body>
 </html>
