@@ -439,14 +439,14 @@
     if (!iframe) return;
     // Avoid blanking the src (causes visible flash). Prefer same-origin reload.
     try {
-      if (which === 'top' && overlay) overlay.classList.remove('hidden');
+      if (overlay) overlay.classList.remove('hidden');
       iframe.contentWindow.location.reload();
     } catch (e) {
       // Fallback: reassign src to itself without clearing first to minimise flash
       try {
         const src = iframe.src;
         iframe.src = src;
-        if (which === 'top' && overlay) overlay.classList.remove('hidden');
+        if (overlay) overlay.classList.remove('hidden');
       } catch (e2) {
         // Last resort: do the old blank-and-reset (may flash)
         const src = iframe.src;

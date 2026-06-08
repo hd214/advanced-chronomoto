@@ -34,7 +34,7 @@ if [[ -f "$CONFIG_FILE" ]]; then
   # shellcheck disable=SC1090
   source "$CONFIG_FILE"
 fi
-HIGHLIGHT_NO="${HIGHLIGHT_NO:-}"
+HIGHLIGHT_NO="${HIGHLIGHT_NO:-214}"
 TOP_URL="${TOP_URL:-https://live.chronomoto.com/mx/}"
 BOTTOM_URL="${BOTTOM_URL:-https://live.chronomoto.com/archive}"
 ARCHIVE_TITLE="${ARCHIVE_TITLE:-ARCHIVE}"
