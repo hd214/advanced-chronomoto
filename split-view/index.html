@@ -319,11 +319,13 @@
     bottomUrl: 'https://live.chronomoto.com/archive',
     archiveTitle: 'ARCHIVE',
     defaultSplit: 60,
+    refreshMs: 300000, // default 5 minutes
   }, window.CHRONOMOTO_SPLIT_CONFIG || {});
 
   const TOP_URL       = CFG.topUrl;
   const BOTTOM_URL    = CFG.bottomUrl;
   const DEFAULT_SPLIT = CFG.defaultSplit;
+  const ARCHIVE_REFRESH_MS = Number(CFG.refreshMs) || 300000;
   /* ───────────────────────────────────────────────────────────────── */
 
   const archiveBadge = document.getElementById('archive-badge');
@@ -522,18 +524,50 @@
   // save event is received from the archive/top frame. This prevents flashing.
   applyLayout(DEFAULT_SPLIT);
 
-  // Periodic refresh for the bottom iframe only (every 5 minutes).
-  // This restores the simple refresher behavior and avoids message-driven
-  // polling or frequent reloads that caused flashing.
-  (function enableArchiveAutoRefresh() {
-    const ARCHIVE_REFRESH_MS = 5 * 60 * 1000; // 5 minutes
-    try {
-      setInterval(() => {
-        try { reloadFrame('bottom'); } catch (e) { /* ignore */ }
-      }, ARCHIVE_REFRESH_MS);
-    } catch (e) {
-      console.warn('Archive auto-refresh unavailable', e);
+  // Archive refresh progress bar and periodic refresher driven by `ARCHIVE_REFRESH_MS`.
+  (function enableArchiveRefreshBar() {
+    const ms = ARCHIVE_REFRESH_MS;
+    const wrap = document.createElement('div');
+    const fill = document.createElement('div');
+    wrap.id = 'archive-refresh-wrap';
+    fill.id = 'archive-refresh-fill';
+    Object.assign(wrap.style, {
+      position: 'fixed', left: '0', right: '0', bottom: '0', height: '4px',
+      background: 'rgba(255,255,255,0.04)', zIndex: 2147483640, pointerEvents: 'none'
+    });
+    Object.assign(fill.style, {
+      height: '100%', width: '0%', background: 'linear-gradient(90deg,var(--accent2),var(--accent))',
+      transition: 'width 0.2s linear'
+    });
+    wrap.appendChild(fill);
+    document.body.appendChild(wrap);
+
+    let start = Date.now();
+    let rafId = null;
+    function update() {
+      const elapsed = Date.now() - start;
+      const pct = Math.min(1, Math.max(0, elapsed / ms));
+      fill.style.width = (pct * 100) + '%';
+      if (pct >= 1) {
+        // time to refresh
+        try { reloadFrame('bottom'); } catch (e) {}
+        start = Date.now();
+      }
+      rafId = requestAnimationFrame(update);
     }
+    // reset timer when user manually reloads bottom
+    document.querySelectorAll('[data-reload]').forEach(btn => {
+      btn.addEventListener('click', (ev) => {
+        if (btn.dataset.reload === 'bottom') start = Date.now();
+      });
+    });
+
+    // start animation
+    start = Date.now();
+    update();
+
+    // expose a simple reset function for other code
+    window.__chronomoto_resetArchiveTimer = function() { start = Date.now(); };
   })();
 </script>
 </body>

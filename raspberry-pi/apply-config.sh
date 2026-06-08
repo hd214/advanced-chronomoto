@@ -19,6 +19,7 @@ TOP_URL="${TOP_URL:-https://live.chronomoto.com/mx/}"
 BOTTOM_URL="${BOTTOM_URL:-https://live.chronomoto.com/archive}"
 ARCHIVE_TITLE="${ARCHIVE_TITLE:-ARCHIVE}"
 DEFAULT_SPLIT="${DEFAULT_SPLIT:-60}"
+ARCHIVE_REFRESH_MS="${ARCHIVE_REFRESH_MS:-300000}"
 SPLIT_CONFIG="${INSTALL_DIR}/split-view/config.js"
 EXT_OUT="${SCRIPT_DIR}/extension-built"
 EXT_TEMPLATE="${SCRIPT_DIR}/extension-template"
@@ -36,6 +37,7 @@ window.CHRONOMOTO_SPLIT_CONFIG = {
   bottomUrl: '$(js_str "$BOTTOM_URL")',
   archiveTitle: '$(js_str "$ARCHIVE_TITLE")',
   defaultSplit: ${DEFAULT_SPLIT},
+  refreshMs: ${ARCHIVE_REFRESH_MS},
 };
 EOF
 
