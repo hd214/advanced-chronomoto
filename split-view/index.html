@@ -448,6 +448,18 @@
     new ResizeObserver(scaleBottomIframe).observe(panelBottom);
   }
 
+  // Auto-refresh the archive iframe every 10 seconds
+  (function enableArchiveAutoRefresh() {
+    const ARCHIVE_REFRESH_MS = 10000; // 10s
+    try {
+      setInterval(() => {
+        try { reloadFrame('bottom'); } catch (e) { /* ignore */ }
+      }, ARCHIVE_REFRESH_MS);
+    } catch (e) {
+      console.warn('Archive auto-refresh unavailable', e);
+    }
+  })();
+
   applyLayout(DEFAULT_SPLIT);
 </script>
 </body>
