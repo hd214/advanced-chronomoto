@@ -51,4 +51,48 @@ else
   rm -rf "$EXT_OUT"
 fi
 
+# Build a small userscripts extension from any scripts in the repo `userscripts/`
+US_SRC_DIR="${INSTALL_DIR}/userscripts"
+US_EXT_DIR="${EXT_OUT}/userscripts"
+if [[ -d "$US_SRC_DIR" ]]; then
+  shopt -s nullglob
+  js_files=("$US_SRC_DIR"/*.user.js "$US_SRC_DIR"/*.js)
+  if (( ${#js_files[@]} )); then
+    log "Building userscripts extension with ${#js_files[@]} script(s)"
+    rm -rf "$US_EXT_DIR"
+    mkdir -p "$US_EXT_DIR"
+    # Copy scripts and prepare manifest entries
+    js_list=""
+    first=1
+    for src in "${js_files[@]}"; do
+      base=$(basename "$src")
+      cp "$src" "$US_EXT_DIR/$base"
+      if [[ $first -eq 1 ]]; then
+        js_list="\"$base\""
+        first=0
+      else
+        js_list="$js_list, \"$base\""
+      fi
+    done
+
+    cat > "$US_EXT_DIR/manifest.json" << EOF
+{
+  "manifest_version": 3,
+  "name": "Chronomoto Userscripts (Kiosk)",
+  "version": "1.0",
+  "description": "Injects userscripts for Chronomoto kiosk",
+  "content_scripts": [
+    {
+      "matches": ["https://live.chronomoto.com/*"],
+      "js": [ $js_list ],
+      "run_at": "document_idle",
+      "all_frames": false
+    }
+  ]
+}
+EOF
+  fi
+  shopt -u nullglob
+fi
+
 log "Configuration applied."

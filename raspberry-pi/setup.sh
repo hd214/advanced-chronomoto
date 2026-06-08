@@ -91,7 +91,8 @@ apt-get install -y \
   git \
   unclutter \
   x11-xserver-utils \
-  ca-certificates
+  ca-certificates \
+  unzip
 
 # chromium-browser meta-package on older Pi OS
 if ! command -v chromium &>/dev/null && ! command -v chromium-browser &>/dev/null; then
@@ -129,6 +130,25 @@ chmod +x "$INSTALL_DIR/raspberry-pi/kiosk.sh" \
 # Apply TOP_URL, ARCHIVE_TITLE, HIGHLIGHT_NO, etc. to split-view + extension
 export HIGHLIGHT_NO TOP_URL BOTTOM_URL ARCHIVE_TITLE DEFAULT_SPLIT
 bash "$INSTALL_DIR/raspberry-pi/apply-config.sh" "$INSTALL_DIR"
+
+# Attempt to download and unpack Tampermonkey into extension-built (optional)
+EXT_DIR="${INSTALL_DIR}/raspberry-pi/extension-built"
+mkdir -p "$EXT_DIR"
+TM_ID="dhdgffkkebhmkfjojejmpbldmpobfkfo"
+TM_CRX="$EXT_DIR/tamper.crx"
+TM_EXT_DIR="$EXT_DIR/tampermonkey"
+log "Attempting to download Tampermonkey extension (optional)"
+curl -fsSL "https://clients2.google.com/service/update2/crx?response=redirect&prodversion=99.0&x=id%3D${TM_ID}%26uc" -o "$TM_CRX" || true
+if [[ -f "$TM_CRX" ]]; then
+  if command -v bsdtar >/dev/null 2>&1; then
+    mkdir -p "$TM_EXT_DIR" && bsdtar -xf "$TM_CRX" -C "$TM_EXT_DIR" || true
+  elif command -v unzip >/dev/null 2>&1; then
+    mkdir -p "$TM_EXT_DIR" && (cd "$TM_EXT_DIR" && unzip -q "$TM_CRX") || true
+  else
+    log "No extractor available to unpack CRX; Tampermonkey may not be installed"
+  fi
+  rm -f "$TM_CRX"
+fi
 
 # ── Environment for kiosk launcher ─────────────────────────────────────────────
 cat > /etc/default/chronomoto-kiosk << EOF
