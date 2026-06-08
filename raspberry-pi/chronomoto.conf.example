@@ -21,3 +21,10 @@ DEFAULT_SPLIT=60
 
 # Archive refresh interval in milliseconds (default: 60000 = 1 minute)
 ARCHIVE_REFRESH_MS=60000
+
+# Enable the analog clock in the top-right panel (1 = enabled, 0 = disabled)
+# Set to 0 to hide the clock and give the top panel full width.
+CLOCK_ENABLED=1
+
+# Archive refresh interval in milliseconds (default: 60000 = 1 minute)
+ARCHIVE_REFRESH_MS=60000

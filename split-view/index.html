@@ -280,14 +280,23 @@
 <div id="container">
 
   <div class="panel" id="panel-top">
-    <div class="frame-wrap" style="top:0">
-      <div class="loading-overlay" id="load-top">
-        <div class="loader-ring"></div>
-        <span class="loader-text">Loading...</span>
+    <div class="top-inner" style="height:100%;display:flex;">
+      <div class="top-left" style="position:relative;flex:0 0 calc(70% - 3px);min-width:160px;">
+        <div class="loading-overlay" id="load-top">
+          <div class="loader-ring"></div>
+          <span class="loader-text">Loading...</span>
+        </div>
+        <iframe id="iframe-top"
+                onload="frameLoaded('top')"
+                title="Chronomoto Live"
+                style="width:100%;height:100%;border:none;display:block;background:#fff;"></iframe>
       </div>
-      <iframe id="iframe-top"
-              onload="frameLoaded('top')"
-              title="Chronomoto Live"></iframe>
+
+      <div id="top-divider" title="Drag to resize" style="width:8px;cursor:col-resize;background:var(--border);"></div>
+
+      <div class="top-right" style="flex:1;min-width:120px;display:flex;align-items:center;justify-content:center;background:var(--surface);">
+        <canvas id="clock-canvas" style="width:100%;height:100%;max-width:420px;max-height:420px;display:block;"></canvas>
+      </div>
     </div>
   </div>
 
@@ -326,6 +335,7 @@
   const BOTTOM_URL    = CFG.bottomUrl;
   const DEFAULT_SPLIT = CFG.defaultSplit;
   const ARCHIVE_REFRESH_MS = Number(CFG.refreshMs) || 300000;
+  const CLOCK_ENABLED = Boolean(CFG.clockEnabled);
   /* ───────────────────────────────────────────────────────────────── */
 
   const archiveBadge = document.getElementById('archive-badge');
@@ -348,15 +358,23 @@
 
   const container    = document.getElementById('container');
   const divider      = document.getElementById('divider');
+  const topDivider   = document.getElementById('top-divider');
   const panelTop     = document.getElementById('panel-top');
   const panelBottom  = document.getElementById('panel-bottom');
   const dragOverlay  = document.getElementById('drag-overlay');
   const iframeBottom = document.getElementById('iframe-bottom');
+  const topInner     = document.querySelector('.top-inner');
+  const topLeft      = document.querySelector('.top-left');
+  const topRight     = document.querySelector('.top-right');
 
   let topPercent = DEFAULT_SPLIT;
   let isDragging = false;
   let startY = 0;
   let startTopH = 0;
+  let isTopDragging = false;
+  let startX = 0;
+  let startLeftW = 0;
+  let topRightPercent = 30; // default percent width for right panel
 
   function scaleBottomIframe() {
     const panelH = panelBottom.getBoundingClientRect().height;
@@ -375,6 +393,15 @@
     requestAnimationFrame(scaleBottomIframe);
   }
 
+  function applyTopInnerLayout(rightPct) {
+    rightPct = Math.min(85, Math.max(10, rightPct));
+    topRightPercent = rightPct;
+    // set left as (100 - rightPct)
+    const leftPct = 100 - rightPct;
+    topLeft.style.flex = '0 0 calc(' + leftPct + '% - 4px)';
+    // show percentage briefly in topbar while dragging (handled in drag events)
+  }
+
   function snap(top) {
     applyLayout(top);
   }
@@ -388,6 +415,10 @@
 
   divider.addEventListener('mousedown', startDrag);
   divider.addEventListener('touchstart', startDrag, { passive: false });
+  if (topDivider) {
+    topDivider.addEventListener('mousedown', startTopDrag);
+    topDivider.addEventListener('touchstart', startTopDrag, { passive: false });
+  }
 
   function startDrag(e) {
     e.preventDefault();
@@ -401,6 +432,65 @@
     document.addEventListener('mouseup',   stopDrag);
     document.addEventListener('touchmove', onDrag, { passive: false });
     document.addEventListener('touchend',  stopDrag);
+    document.addEventListener('touchmove', onDrag, { passive: false });
+    document.addEventListener('touchend',  stopDrag);
+  }
+
+  // Top horizontal splitter (left/right) drag handlers
+  function startTopDrag(e) {
+    e.preventDefault();
+    isTopDragging = true;
+    topDivider.classList.add('dragging');
+    dragOverlay.style.display = 'block';
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    startX = clientX;
+    startLeftW = topLeft.getBoundingClientRect().width;
+    document.addEventListener('mousemove', onTopDrag);
+    document.addEventListener('mouseup', stopTopDrag);
+    document.addEventListener('touchmove', onTopDrag, { passive: false });
+    document.addEventListener('touchend',  stopTopDrag);
+    showTopDragIndicator();
+  }
+
+  function onTopDrag(e) {
+    if (!isTopDragging) return;
+    e.preventDefault();
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const delta = clientX - startX;
+    const totalW = topInner.getBoundingClientRect().width;
+    const newLeft = Math.max(80, startLeftW + delta);
+    const rightPct = Math.round(((totalW - newLeft) / totalW) * 100);
+    applyTopInnerLayout(rightPct);
+    updateTopDragIndicator(rightPct);
+  }
+
+  function stopTopDrag() {
+    if (!isTopDragging) return;
+    isTopDragging = false;
+    topDivider.classList.remove('dragging');
+    dragOverlay.style.display = 'none';
+    document.removeEventListener('mousemove', onTopDrag);
+    document.removeEventListener('mouseup', stopTopDrag);
+    document.removeEventListener('touchmove', onTopDrag);
+    document.removeEventListener('touchend',  stopTopDrag);
+    hideTopDragIndicator();
+  }
+
+  // Drag indicator element for top split
+  const topDragIndicator = document.createElement('div');
+  topDragIndicator.id = 'top-drag-indicator';
+  Object.assign(topDragIndicator.style, {
+    position: 'fixed', zIndex: 99999, padding: '6px 8px', borderRadius: '4px',
+    background: 'rgba(0,0,0,0.7)', color: 'white', fontSize: '13px', pointerEvents: 'none', display: 'none'
+  });
+  document.body.appendChild(topDragIndicator);
+  function showTopDragIndicator() { topDragIndicator.style.display = 'block'; }
+  function hideTopDragIndicator() { topDragIndicator.style.display = 'none'; }
+  function updateTopDragIndicator(pct) {
+    topDragIndicator.textContent = 'Right: ' + pct + '%';
+    const r = topInner.getBoundingClientRect();
+    topDragIndicator.style.left = (r.right - 140) + 'px';
+    topDragIndicator.style.top = (r.top + 8) + 'px';
   }
 
   function onDrag(e) {
@@ -517,6 +607,11 @@
 
   if (window.ResizeObserver) {
     new ResizeObserver(scaleBottomIframe).observe(panelBottom);
+    // observe clock canvas container only when clock is enabled
+    if (CLOCK_ENABLED) {
+      const clockCanvas = document.getElementById('clock-canvas');
+      if (clockCanvas) new ResizeObserver(resizeClockCanvas).observe(document.querySelector('.top-right'));
+    }
   }
 
   applyLayout(DEFAULT_SPLIT);
@@ -569,6 +664,83 @@
     // expose a simple reset function for other code
     window.__chronomoto_resetArchiveTimer = function() { start = Date.now(); };
   })();
+
+  // initialize top inner layout
+  if (CLOCK_ENABLED) {
+    applyTopInnerLayout(topRightPercent);
+  } else {
+    // hide right panel and divider when clock disabled
+    if (topDivider) topDivider.style.display = 'none';
+    if (topRight) topRight.style.display = 'none';
+    if (topLeft) topLeft.style.flex = '1';
+  }
+
+  // Analog clock implementation
+  const canvas = document.getElementById('clock-canvas');
+  let ctx = null;
+  function resizeClockCanvas() {
+    if (!canvas) return;
+    const rect = canvas.getBoundingClientRect();
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = Math.max(160, Math.floor(rect.width * dpr));
+    canvas.height = Math.max(160, Math.floor(rect.height * dpr));
+    canvas.style.width = rect.width + 'px';
+    canvas.style.height = rect.height + 'px';
+    ctx = canvas.getContext('2d');
+    if (ctx) ctx.setTransform(dpr,0,0,dpr,0,0);
+  }
+
+  function drawClock() {
+    if (!ctx) return;
+    const rect = canvas.getBoundingClientRect();
+    const w = rect.width, h = rect.height;
+    const cx = w / 2, cy = h / 2;
+    const r = Math.min(w, h) / 2 * 0.9;
+    // clear
+    ctx.clearRect(0, 0, w, h);
+    // ticks
+    ctx.strokeStyle = '#c8cdd6';
+    for (let i=0;i<60;i++){
+      const ang = (i/60) * Math.PI*2;
+      const inner = (i%5===0) ? r*0.78 : r*0.86;
+      const outer = r*0.95;
+      const x1 = cx + Math.cos(ang)*inner;
+      const y1 = cy + Math.sin(ang)*inner;
+      const x2 = cx + Math.cos(ang)*outer;
+      const y2 = cy + Math.sin(ang)*outer;
+      ctx.lineWidth = (i%5===0)?3:1.5;
+      ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke();
+    }
+    // numbers
+    ctx.fillStyle = 'white'; ctx.font = (r*0.22)+'px Barlow Condensed, sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText('12', cx, cy - r*0.55);
+    ctx.fillText('3', cx + r*0.55, cy);
+    ctx.fillText('6', cx, cy + r*0.55);
+    ctx.fillText('9', cx - r*0.55, cy);
+    // hands
+    const now = new Date();
+    const sec = now.getSeconds() + now.getMilliseconds()/1000;
+    const min = now.getMinutes() + sec/60;
+    const hr = (now.getHours()%12) + min/60;
+    const hourAng = (hr/12) * Math.PI*2 - Math.PI/2;
+    ctx.strokeStyle = '#ffffff'; ctx.lineWidth = Math.max(6, r*0.08); ctx.lineCap='round';
+    ctx.beginPath(); ctx.moveTo(cx,cy); ctx.lineTo(cx + Math.cos(hourAng)*r*0.5, cy + Math.sin(hourAng)*r*0.5); ctx.stroke();
+    const minAng = (min/60) * Math.PI*2 - Math.PI/2;
+    ctx.strokeStyle = '#e8ff00'; ctx.lineWidth = Math.max(4, r*0.06);
+    ctx.beginPath(); ctx.moveTo(cx,cy); ctx.lineTo(cx + Math.cos(minAng)*r*0.72, cy + Math.sin(minAng)*r*0.72); ctx.stroke();
+    // center pin
+    ctx.fillStyle = '#ff4d00'; ctx.beginPath(); ctx.arc(cx,cy, Math.max(4, r*0.03), 0, Math.PI*2); ctx.fill();
+  }
+
+  function tickClock() {
+    if (!CLOCK_ENABLED) return;
+    try { resizeClockCanvas(); drawClock(); } catch (e) {}
+    requestAnimationFrame(tickClock);
+  }
+  if (CLOCK_ENABLED) {
+    resizeClockCanvas();
+    requestAnimationFrame(tickClock);
+  }
 </script>
 </body>
 </html>
