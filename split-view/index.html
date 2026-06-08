@@ -464,6 +464,14 @@
           // Make sure the new iframe uses the expected id and onload handler
           hidden.id = 'iframe-' + which;
           hidden.onload = () => frameLoaded(which);
+          // Make the swapped iframe visible and sized like the original
+          hidden.style.display = '';
+          hidden.style.visibility = 'visible';
+          hidden.style.width = '100%';
+          hidden.style.height = iframe.style.height || iframe.getAttribute('height') || '100%';
+          hidden.style.transform = 'none';
+          // Attempt to scale if needed
+          try { scaleBottomIframe(); } catch (_) {}
           // If there is a load overlay, hide it now
           const loadEl = document.getElementById('load-' + which);
           if (loadEl) loadEl.classList.add('hidden');
