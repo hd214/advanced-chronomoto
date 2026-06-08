@@ -18,3 +18,6 @@ ARCHIVE_TITLE=ARCHIVE
 
 # Default top/bottom split ratio (percent for top panel)
 DEFAULT_SPLIT=60
+
+# Archive refresh interval in milliseconds (default: 60000 = 1 minute)
+ARCHIVE_REFRESH_MS=60000
