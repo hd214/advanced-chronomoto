@@ -39,48 +39,55 @@ window.CHRONOMOTO_SPLIT_CONFIG = {
 };
 EOF
 
+## Build a single extension directory (`$EXT_OUT`) that contains
+## the highlight script (if configured) and any userscripts so
+## Chromium can load them with a single --load-extension.
+rm -rf "$EXT_OUT"
+mkdir -p "$EXT_OUT"
+
+shopt -s nullglob
+all_js=()
+
 if [[ -n "$HIGHLIGHT_NO" ]]; then
-  log "Building highlight extension for rider No. ${HIGHLIGHT_NO}"
-  rm -rf "$EXT_OUT"
-  mkdir -p "$EXT_OUT"
-  cp "$EXT_TEMPLATE/manifest.json" "$EXT_OUT/"
+  log "Adding highlight script for rider No. ${HIGHLIGHT_NO}"
   sed "s/__HIGHLIGHT_NO__/$(js_str "$HIGHLIGHT_NO")/g" \
-    "$EXT_TEMPLATE/content.js" > "$EXT_OUT/content.js"
-else
-  log "HIGHLIGHT_NO empty — skipping highlight extension"
-  rm -rf "$EXT_OUT"
+    "$EXT_TEMPLATE/content.js" > "$EXT_OUT/content-highlight.js"
+  all_js+=("content-highlight.js")
 fi
 
-# Build a small userscripts extension from any scripts in the repo `userscripts/`
+# Copy userscripts from install tree into the extension root
 US_SRC_DIR="${INSTALL_DIR}/userscripts"
-US_EXT_DIR="${EXT_OUT}/userscripts"
 if [[ -d "$US_SRC_DIR" ]]; then
-  shopt -s nullglob
   js_files=("$US_SRC_DIR"/*.user.js "$US_SRC_DIR"/*.js)
   if (( ${#js_files[@]} )); then
-    log "Building userscripts extension with ${#js_files[@]} script(s)"
-    rm -rf "$US_EXT_DIR"
-    mkdir -p "$US_EXT_DIR"
-    # Copy scripts and prepare manifest entries
-    js_list=""
-    first=1
+    log "Adding ${#js_files[@]} userscript(s) to extension"
     for src in "${js_files[@]}"; do
       base=$(basename "$src")
-      cp "$src" "$US_EXT_DIR/$base"
-      if [[ $first -eq 1 ]]; then
-        js_list="\"$base\""
-        first=0
-      else
-        js_list="$js_list, \"$base\""
-      fi
+      cp "$src" "$EXT_OUT/$base"
+      all_js+=("$base")
     done
+  fi
+fi
 
-    cat > "$US_EXT_DIR/manifest.json" << EOF
+if (( ${#all_js[@]} )); then
+  # Build manifest.json collecting all content scripts
+  js_list=""
+  first=1
+  for f in "${all_js[@]}"; do
+    if [[ $first -eq 1 ]]; then
+      js_list="\"$f\""
+      first=0
+    else
+      js_list="$js_list, \"$f\""
+    fi
+  done
+
+  cat > "$EXT_OUT/manifest.json" << EOF
 {
   "manifest_version": 3,
-  "name": "Chronomoto Userscripts (Kiosk)",
+  "name": "Chronomoto Kiosk Extension",
   "version": "1.0",
-  "description": "Injects userscripts for Chronomoto kiosk",
+  "description": "Highlight + userscripts for Chronomoto kiosk",
   "content_scripts": [
     {
       "matches": ["https://live.chronomoto.com/*"],
@@ -91,8 +98,12 @@ if [[ -d "$US_SRC_DIR" ]]; then
   ]
 }
 EOF
-  fi
-  shopt -u nullglob
+  log "Built combined extension with ${#all_js[@]} script(s) -> $EXT_OUT"
+else
+  log "No highlight or userscripts found — leaving $EXT_OUT empty"
+  rm -rf "$EXT_OUT"
 fi
+
+shopt -u nullglob
 
 log "Configuration applied."
