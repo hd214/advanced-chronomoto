@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chronomoto · Live Split View</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Barlow+Condensed:wght@300;500;700;900&display=swap');
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --divider-h: 6px;
+      --chrome-h: 36px;
+      --bg: #0a0b0d;
+      --surface: #111318;
+      --border: #1e2229;
+      --accent: #e8ff00;
+      --accent2: #ff4d00;
+      --text: #c8cdd6;
+      --muted: #4a5060;
+      --live: #ff3838;
+    }
+
+    html, body {
+      height: 100%;
+      overflow: hidden;
+      background: var(--bg);
+      font-family: 'DM Mono', monospace;
+      color: var(--text);
+    }
+
+    #topbar {
+      height: 38px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      padding: 0 12px;
+      gap: 8px;
+      position: relative;
+      z-index: 100;
+    }
+
+    #topbar .logo {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 900;
+      font-size: 16px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--accent);
+    }
+
+    #topbar .sep { flex: 1; }
+
+    #topbar .pill {
+      font-size: 10px;
+      font-weight: 500;
+      letter-spacing: 0.08em;
+      padding: 3px 8px;
+      border-radius: 2px;
+      background: rgba(232,255,0,0.08);
+      color: var(--accent);
+      border: 1px solid rgba(232,255,0,0.2);
+    }
+
+    .divider-v {
+      width: 1px;
+      height: 18px;
+      background: var(--border);
+      flex-shrink: 0;
+      margin: 0 2px;
+    }
+
+    .badge {
+      font-size: 9px;
+      font-weight: 500;
+      padding: 2px 6px;
+      border-radius: 2px;
+      letter-spacing: 0.06em;
+      flex-shrink: 0;
+    }
+    .badge-live {
+      background: rgba(255,56,56,0.15);
+      color: var(--live);
+      border: 1px solid rgba(255,56,56,0.3);
+    }
+    .badge-archive {
+      background: rgba(255,77,0,0.12);
+      color: var(--accent2);
+      border: 1px solid rgba(255,77,0,0.25);
+    }
+
+    .panel-url {
+      font-size: 10px;
+      color: var(--muted);
+      opacity: 0.6;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 160px;
+    }
+
+    .action-btn {
+      background: none;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      font-family: 'DM Mono', monospace;
+      font-size: 10px;
+      padding: 2px 8px;
+      border-radius: 2px;
+      cursor: pointer;
+      transition: all 0.15s;
+      flex-shrink: 0;
+    }
+    .action-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+    #topbar .live-dot {
+      display: inline-block;
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: var(--live);
+      box-shadow: 0 0 6px var(--live);
+      animation: pulse 1.4s ease-in-out infinite;
+      margin-right: 5px;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(0.85); }
+    }
+
+    #container {
+      display: flex;
+      flex-direction: column;
+      height: calc(100vh - 38px);
+      overflow: hidden;
+    }
+
+    .panel {
+      position: relative;
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+
+    #panel-bottom { flex: 1 1 0; min-height: 0; }
+
+    .frame-wrap {
+      position: absolute;
+      inset: 0;
+      top: var(--chrome-h);
+    }
+
+    #bottom-scaler {
+      width: 100%;
+      height: 100%;
+      position: relative;
+      overflow: hidden;
+    }
+
+    #iframe-top {
+      width: 100%;
+      height: 100%;
+      border: none;
+      display: block;
+      background: #fff;
+    }
+
+    #bottom-scaler iframe {
+      border: none;
+      display: block;
+      background: #fff;
+      position: absolute;
+      top: 0;
+      left: 0;
+      transform-origin: top left;
+    }
+
+    .loading-overlay {
+      position: absolute;
+      inset: 0;
+      background: var(--bg);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      z-index: 5;
+      transition: opacity 0.4s;
+    }
+    .loading-overlay.hidden { opacity: 0; pointer-events: none; }
+
+    .loader-ring {
+      width: 36px; height: 36px;
+      border: 2px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .loader-text {
+      font-size: 11px;
+      color: var(--muted);
+      letter-spacing: 0.1em;
+    }
+
+    #divider {
+      height: var(--divider-h);
+      background: var(--border);
+      cursor: ns-resize;
+      position: relative;
+      flex-shrink: 0;
+      z-index: 50;
+      transition: background 0.1s;
+      user-select: none;
+    }
+
+    #divider:hover, #divider.dragging { background: #2a2f3a; }
+
+    #divider::after {
+      content: '';
+      position: absolute;
+      inset: -5px 0;
+      cursor: ns-resize;
+    }
+
+    #drag-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      cursor: ns-resize;
+    }
+
+    .snap-bar { display: flex; gap: 6px; }
+    .snap-btn {
+      background: none;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      font-family: 'DM Mono', monospace;
+      font-size: 9px;
+      padding: 2px 6px;
+      border-radius: 2px;
+      cursor: pointer;
+      transition: all 0.15s;
+      white-space: nowrap;
+    }
+    .snap-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .snap-btn.active { border-color: var(--accent); color: var(--accent); background: rgba(232,255,0,0.07); }
+  </style>
+</head>
+<body>
+
+<div id="topbar">
+  <span class="logo">Chronomoto</span>
+  <span class="pill"><span class="live-dot"></span>Split View</span>
+  <div class="divider-v"></div>
+  <span class="badge badge-live"><span class="live-dot" style="width:5px;height:5px;margin-right:4px;"></span>LIVE</span>
+  <span class="panel-url" id="url-top">live.chronomoto.com/mx/</span>
+  <button class="action-btn" data-reload="top">↺</button>
+  <button class="action-btn" data-open="top">↗ open</button>
+  <div class="divider-v"></div>
+  <span class="badge badge-archive">ARCHIVE</span>
+  <span class="panel-url" id="url-bottom">live.chronomoto.com/archive</span>
+  <button class="action-btn" data-reload="bottom">↺</button>
+  <button class="action-btn" data-open="bottom">↗ open</button>
+  <div class="sep"></div>
+  <div class="snap-bar">
+    <button class="snap-btn" id="snap-50" data-snap="50">50/50</button>
+    <button class="snap-btn" id="snap-55" data-snap="55">55/45</button>
+    <button class="snap-btn active" id="snap-60" data-snap="60">60/40</button>
+    <button class="snap-btn" id="snap-65" data-snap="65">65/35</button>
+    <button class="snap-btn" id="snap-70" data-snap="70">70/30</button>
+  </div>
+</div>
+
+<div id="container">
+
+  <div class="panel" id="panel-top">
+    <div class="frame-wrap" style="top:0">
+      <div class="loading-overlay" id="load-top">
+        <div class="loader-ring"></div>
+        <span class="loader-text">Loading...</span>
+      </div>
+      <iframe id="iframe-top"
+              onload="frameLoaded('top')"
+              title="Chronomoto Live"></iframe>
+    </div>
+  </div>
+
+  <div id="divider" title="Drag to resize"></div>
+
+  <div class="panel" id="panel-bottom">
+    <div class="frame-wrap" style="top:0">
+      <div class="loading-overlay" id="load-bottom">
+        <div class="loader-ring" style="border-top-color:var(--accent2)"></div>
+        <span class="loader-text">Loading...</span>
+      </div>
+      <div id="bottom-scaler">
+        <iframe id="iframe-bottom"
+                onload="frameLoaded('bottom')"
+                title="Chronomoto Archive"></iframe>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div id="drag-overlay"></div>
+
+<script>
+  /* ── CONFIG ── */
+  const TOP_URL         = 'https://live.chronomoto.com/mx/';
+  const BOTTOM_URL      = 'https://live.chronomoto.com/archive';
+  const DEFAULT_SPLIT   = 60; // default top panel percentage
+  /* ─────────── */
+
+  document.getElementById('iframe-top').src    = TOP_URL;
+  document.getElementById('iframe-bottom').src = BOTTOM_URL;
+  document.getElementById('url-top').textContent    = TOP_URL.replace('https://', '');
+  document.getElementById('url-bottom').textContent = BOTTOM_URL.replace('https://', '');
+
+  document.querySelectorAll('[data-open]').forEach(btn => {
+    btn.addEventListener('click', () => openExternal(btn.dataset.open === 'top' ? TOP_URL : BOTTOM_URL));
+  });
+  document.querySelectorAll('[data-reload]').forEach(btn => {
+    btn.addEventListener('click', () => reloadFrame(btn.dataset.reload));
+  });
+  document.querySelectorAll('[data-snap]').forEach(btn => {
+    btn.addEventListener('click', () => snap(+btn.dataset.snap));
+  });
+
+  const container    = document.getElementById('container');
+  const divider      = document.getElementById('divider');
+  const panelTop     = document.getElementById('panel-top');
+  const panelBottom  = document.getElementById('panel-bottom');
+  const dragOverlay  = document.getElementById('drag-overlay');
+  const iframeBottom = document.getElementById('iframe-bottom');
+
+  let topPercent = DEFAULT_SPLIT;
+  let isDragging = false;
+  let startY = 0;
+  let startTopH = 0;
+
+  function scaleBottomIframe() {
+    const panelH = panelBottom.getBoundingClientRect().height;
+    const availH = panelH - 36;
+    if (availH <= 0) return;
+
+    iframeBottom.style.width  = '100%';
+    iframeBottom.style.height = availH + 'px';
+    iframeBottom.style.transform = 'none';
+  }
+
+  function applyLayout(pct) {
+    topPercent = Math.min(85, Math.max(15, pct));
+    panelTop.style.flex = '0 0 calc(' + topPercent + '% - 3px)';
+    updateSnapButtons();
+    requestAnimationFrame(scaleBottomIframe);
+  }
+
+  function snap(top) {
+    applyLayout(top);
+  }
+
+  function updateSnapButtons() {
+    [50,55,60,65,70].forEach(v => {
+      const btn = document.getElementById('snap-' + v);
+      if (btn) btn.classList.toggle('active', Math.round(topPercent) === v);
+    });
+  }
+
+  divider.addEventListener('mousedown', startDrag);
+  divider.addEventListener('touchstart', startDrag, { passive: false });
+
+  function startDrag(e) {
+    e.preventDefault();
+    isDragging = true;
+    divider.classList.add('dragging');
+    dragOverlay.style.display = 'block';
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    startY    = clientY;
+    startTopH = panelTop.getBoundingClientRect().height;
+    document.addEventListener('mousemove', onDrag);
+    document.addEventListener('mouseup',   stopDrag);
+    document.addEventListener('touchmove', onDrag, { passive: false });
+    document.addEventListener('touchend',  stopDrag);
+  }
+
+  function onDrag(e) {
+    if (!isDragging) return;
+    e.preventDefault();
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    const delta   = clientY - startY;
+    const totalH  = container.getBoundingClientRect().height - 6;
+    const pct     = ((startTopH + delta) / totalH) * 100;
+    applyLayout(pct);
+  }
+
+  function stopDrag() {
+    isDragging = false;
+    divider.classList.remove('dragging');
+    dragOverlay.style.display = 'none';
+    document.removeEventListener('mousemove', onDrag);
+    document.removeEventListener('mouseup',   stopDrag);
+    document.removeEventListener('touchmove', onDrag);
+    document.removeEventListener('touchend',  stopDrag);
+  }
+
+  function frameLoaded(which) {
+    const el = document.getElementById('load-' + which);
+    if (el) el.classList.add('hidden');
+
+    if (which === 'bottom') {
+      try {
+        iframeBottom.contentWindow.scrollTo(0, 0);
+      } catch(e) {}
+      scaleBottomIframe();
+    }
+  }
+
+  function reloadFrame(which) {
+    const iframe   = document.getElementById('iframe-' + which);
+    const overlay  = document.getElementById('load-' + which);
+    if (overlay) overlay.classList.remove('hidden');
+    const src = iframe.src;
+    iframe.src = '';
+    setTimeout(() => { iframe.src = src; }, 50);
+  }
+
+  function openExternal(url) { window.open(url, '_blank'); }
+
+  if (window.ResizeObserver) {
+    new ResizeObserver(scaleBottomIframe).observe(panelBottom);
+  }
+
+  applyLayout(DEFAULT_SPLIT);
+</script>
+</body>
+</html>

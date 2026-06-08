@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chronomoto Tools — Install</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Barlow+Condensed:wght@700;900&display=swap');
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0a0b0d;
+      --surface: #111318;
+      --border: #1e2229;
+      --accent: #e8ff00;
+      --accent2: #ff4d00;
+      --text: #c8cdd6;
+      --muted: #6a7080;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'DM Mono', monospace;
+      min-height: 100vh;
+      padding: 32px 20px 48px;
+    }
+
+    .wrap { max-width: 720px; margin: 0 auto; }
+
+    h1 {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 900;
+      font-size: 2rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 6px;
+    }
+
+    .subtitle {
+      color: var(--muted);
+      font-size: 13px;
+      margin-bottom: 32px;
+      line-height: 1.5;
+    }
+
+    .notice {
+      background: rgba(232,255,0,0.06);
+      border: 1px solid rgba(232,255,0,0.2);
+      border-radius: 6px;
+      padding: 12px 16px;
+      font-size: 12px;
+      line-height: 1.6;
+      margin-bottom: 28px;
+      color: var(--text);
+    }
+
+    .notice a { color: var(--accent); }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 20px 22px;
+      margin-bottom: 16px;
+    }
+
+    .card h2 {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 1.2rem;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+
+    .card h2 .tag {
+      font-size: 10px;
+      padding: 2px 6px;
+      border-radius: 2px;
+      margin-left: 8px;
+      vertical-align: middle;
+      letter-spacing: 0.08em;
+    }
+    .tag-script { background: rgba(232,255,0,0.1); color: var(--accent); border: 1px solid rgba(232,255,0,0.25); }
+    .tag-page   { background: rgba(255,77,0,0.1); color: var(--accent2); border: 1px solid rgba(255,77,0,0.25); }
+
+    .card p {
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.6;
+      margin-bottom: 14px;
+    }
+
+    .btn-row { display: flex; flex-wrap: wrap; gap: 8px; }
+
+    .btn {
+      display: inline-block;
+      padding: 8px 16px;
+      border-radius: 4px;
+      font-family: 'DM Mono', monospace;
+      font-size: 12px;
+      font-weight: 500;
+      text-decoration: none;
+      cursor: pointer;
+      border: 2px solid;
+      transition: all 0.15s;
+    }
+
+    .btn-primary {
+      background: rgba(232,255,0,0.1);
+      color: var(--accent);
+      border-color: rgba(232,255,0,0.4);
+    }
+    .btn-primary:hover { background: rgba(232,255,0,0.2); }
+
+    .btn-secondary {
+      background: transparent;
+      color: var(--muted);
+      border-color: var(--border);
+    }
+    .btn-secondary:hover { color: var(--text); border-color: var(--muted); }
+
+    .btn-orange {
+      background: rgba(255,77,0,0.1);
+      color: var(--accent2);
+      border-color: rgba(255,77,0,0.4);
+    }
+    .btn-orange:hover { background: rgba(255,77,0,0.2); }
+
+    .section-title {
+      font-size: 11px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin: 28px 0 12px;
+    }
+
+    .browser-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+      gap: 8px;
+    }
+
+    .browser-grid a {
+      font-size: 11px;
+      color: var(--muted);
+      text-decoration: none;
+      padding: 8px 10px;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      transition: all 0.15s;
+    }
+    .browser-grid a:hover { color: var(--accent); border-color: rgba(232,255,0,0.3); }
+
+    footer {
+      margin-top: 36px;
+      font-size: 11px;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+    footer a { color: var(--accent); }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Chronomoto Tools</h1>
+    <p class="subtitle">Userscripts and split view for live.chronomoto.com timing pages.</p>
+
+    <div class="notice">
+      <strong>Before installing scripts:</strong> install a userscript manager first —
+      <a href="https://www.tampermonkey.net/" target="_blank" rel="noopener">Tampermonkey</a> (recommended)
+      or <a href="https://violentmonkey.github.io/" target="_blank" rel="noopener">Violentmonkey</a>.
+      Then click <em>Install with Tampermonkey</em> below. Tampermonkey will prompt you to confirm.
+    </div>
+
+    <div class="card">
+      <h2>Row Highlighter <span class="tag tag-script">userscript</span></h2>
+      <p>Highlights a rider row by number (No. column). Click any No. cell to pick a rider, or type a number in the floating panel.</p>
+      <div class="btn-row">
+        <a class="btn btn-primary" id="install-highlight" href="#">Install with Tampermonkey</a>
+        <a class="btn btn-secondary" id="raw-highlight" href="#" target="_blank" rel="noopener">Raw script URL</a>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Archiver <span class="tag tag-script">userscript</span></h2>
+      <p>Automatically saves final results when <code>Flag status: Finished</code> appears. Browse saved races at <code>/archive</code> and export CSV.</p>
+      <div class="btn-row">
+        <a class="btn btn-primary" id="install-archiver" href="#">Install with Tampermonkey</a>
+        <a class="btn btn-secondary" id="raw-archiver" href="#" target="_blank" rel="noopener">Raw script URL</a>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Split View <span class="tag tag-page">web page</span></h2>
+      <p>Live timing on top, archive dashboard on bottom — resizable split screen. No extension needed; open in any browser.</p>
+      <div class="btn-row">
+        <a class="btn btn-orange" id="open-split" href="split-view/index.html">Open Split View</a>
+      </div>
+    </div>
+
+    <p class="section-title">Get a userscript manager</p>
+    <div class="browser-grid">
+      <a href="https://chromewebstore.google.com/detail/tampermonkey/dhdgffkkebhmkfjojejmpbldmpobfkfo" target="_blank" rel="noopener">Tampermonkey · Chrome</a>
+      <a href="https://microsoftedge.microsoft.com/addons/detail/tampermonkey/iikmkjmpaadaobahmlepeloendndfphd" target="_blank" rel="noopener">Tampermonkey · Edge</a>
+      <a href="https://addons.mozilla.org/en-US/firefox/addon/tampermonkey/" target="_blank" rel="noopener">Tampermonkey · Firefox</a>
+      <a href="https://addons.opera.com/en/extensions/details/tampermonkey-beta/" target="_blank" rel="noopener">Tampermonkey · Opera</a>
+      <a href="https://chromewebstore.google.com/detail/violentmonkey/jinjaccalgkegednnccohejagnlnfdag" target="_blank" rel="noopener">Violentmonkey · Chrome</a>
+      <a href="https://addons.mozilla.org/en-US/firefox/addon/violentmonkey/" target="_blank" rel="noopener">Violentmonkey · Firefox</a>
+    </div>
+
+    <footer>
+      Full documentation: <a href="https://github.com/hd214/advanced-chronomoto#readme" target="_blank" rel="noopener">README on GitHub</a>.
+      After install, edit the <code>CONFIG</code> block in each script to set your default rider number or category filter.
+    </footer>
+  </div>
+
+  <script>
+    const REPO = 'https://raw.githubusercontent.com/hd214/advanced-chronomoto/main';
+    const SCRIPTS = {
+      highlight: REPO + '/userscripts/chronomoto-highlight.user.js',
+      archiver:  REPO + '/userscripts/chronomoto-archiver.user.js',
+    };
+    const TM_INSTALL = 'https://www.tampermonkey.net/script_installation.php#url=';
+
+    function tmInstallUrl(rawUrl) {
+      return TM_INSTALL + encodeURIComponent(rawUrl);
+    }
+
+    document.getElementById('install-highlight').href = tmInstallUrl(SCRIPTS.highlight);
+    document.getElementById('install-archiver').href  = tmInstallUrl(SCRIPTS.archiver);
+    document.getElementById('raw-highlight').href     = SCRIPTS.highlight;
+    document.getElementById('raw-archiver').href      = SCRIPTS.archiver;
+  </script>
+</body>
+</html>
