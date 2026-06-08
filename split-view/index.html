@@ -437,21 +437,51 @@
     const iframe = document.getElementById('iframe-' + which);
     const overlay = document.getElementById('load-' + which);
     if (!iframe) return;
-    // Avoid blanking the src (causes visible flash). Prefer same-origin reload.
+
+    // Load the new URL in a hidden iframe, then swap it into the DOM
+    // once it's fully loaded — prevents visible white/404 flash.
     try {
-      if (overlay) overlay.classList.remove('hidden');
-      iframe.contentWindow.location.reload();
+      const src = iframe.src;
+      const hidden = document.createElement('iframe');
+      hidden.style.display = 'none';
+      hidden.style.visibility = 'hidden';
+      hidden.width = iframe.width || '100%';
+      hidden.height = iframe.height || iframe.style.height || '100%';
+      hidden.setAttribute('title', iframe.getAttribute('title') || '');
+      hidden.src = src;
+
+      let swapped = false;
+      hidden.addEventListener('load', () => {
+        if (swapped) return;
+        swapped = true;
+        try {
+          // Preserve id on the visible iframe by swapping nodes
+          const parent = iframe.parentNode;
+          if (!parent) return;
+          // Insert hidden where the visible iframe is, then remove visible
+          parent.insertBefore(hidden, iframe);
+          parent.removeChild(iframe);
+          // Make sure the new iframe uses the expected id and onload handler
+          hidden.id = 'iframe-' + which;
+          hidden.onload = () => frameLoaded(which);
+          // If there is a load overlay, hide it now
+          const loadEl = document.getElementById('load-' + which);
+          if (loadEl) loadEl.classList.add('hidden');
+        } catch (sw) {
+          // If swap fails, just ensure the hidden iframe is removed
+          try { hidden.remove(); } catch (_) {}
+        }
+      }, { once: true });
+
+      // Append hidden iframe next to the visible one so network begins
+      iframe.parentNode.appendChild(hidden);
     } catch (e) {
-      // Fallback: reassign src to itself without clearing first to minimise flash
+      // Fallback to previous behaviour: try reload then reassign src
       try {
+        iframe.contentWindow.location.reload();
+      } catch (e2) {
         const src = iframe.src;
         iframe.src = src;
-        if (overlay) overlay.classList.remove('hidden');
-      } catch (e2) {
-        // Last resort: do the old blank-and-reset (may flash)
-        const src = iframe.src;
-        iframe.src = '';
-        setTimeout(() => { iframe.src = src; }, 50);
       }
     }
   }
