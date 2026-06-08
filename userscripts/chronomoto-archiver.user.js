@@ -188,9 +188,9 @@
     console.log('[Chronomoto Archiver] Saved:', entry);
     try {
       // Notify parent/split-view to refresh after a short delay
-      if (window && window.top && window.top !== window) {
-        window.top.postMessage({ type: 'chronomoto:archived', timestamp: Date.now(), category }, '*');
-      }
+      const msg = { type: 'chronomoto:archived', timestamp: Date.now(), category };
+      try { if (window && window.parent) window.parent.postMessage(msg, '*'); } catch (e) {}
+      try { if (window && window.top && window.top !== window) window.top.postMessage(msg, '*'); } catch (e) {}
     } catch (e) {}
   }
 

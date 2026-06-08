@@ -517,18 +517,9 @@
     new ResizeObserver(scaleBottomIframe).observe(panelBottom);
   }
 
-  // Auto-refresh the archive iframe every 10 seconds
-  (function enableArchiveAutoRefresh() {
-    const ARCHIVE_REFRESH_MS = 10000; // 10s
-    try {
-      setInterval(() => {
-        try { reloadFrame('bottom'); } catch (e) { /* ignore */ }
-      }, ARCHIVE_REFRESH_MS);
-    } catch (e) {
-      console.warn('Archive auto-refresh unavailable', e);
-    }
-  })();
-
+  applyLayout(DEFAULT_SPLIT);
+  // No periodic auto-refresh for the bottom iframe — reload only when an archive
+  // save event is received from the archive/top frame. This prevents flashing.
   applyLayout(DEFAULT_SPLIT);
 
   // Listen for archiver events from the archive iframe and refresh bottom iframe
