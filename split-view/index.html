@@ -250,6 +250,41 @@
     }
     .snap-btn:hover { border-color: var(--accent); color: var(--accent); }
     .snap-btn.active { border-color: var(--accent); color: var(--accent); background: rgba(232,255,0,0.07); }
+
+    #url-edit-wrap {
+      display: none;
+      align-items: center;
+      gap: 4px;
+    }
+    #url-edit-wrap.visible { display: flex; }
+    #url-prefix {
+      font-size: 10px;
+      color: var(--muted);
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    #url-input {
+      background: var(--bg);
+      border: 1px solid var(--accent);
+      color: var(--accent);
+      font-family: 'DM Mono', monospace;
+      font-size: 10px;
+      padding: 2px 6px;
+      border-radius: 2px;
+      outline: none;
+      width: 100px;
+    }
+    #url-confirm {
+      background: none;
+      border: 1px solid var(--accent);
+      color: var(--accent);
+      font-family: 'DM Mono', monospace;
+      font-size: 10px;
+      padding: 2px 8px;
+      border-radius: 2px;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
   </style>
 </head>
 <body>
@@ -259,12 +294,17 @@
   <span class="pill"><span class="live-dot"></span>Split View</span>
   <div class="divider-v"></div>
   <span class="badge badge-live"><span class="live-dot" style="width:5px;height:5px;margin-right:4px;"></span>LIVE</span>
-  <span class="panel-url" id="url-top">live.chronomoto.com/mx/</span>
+  <span class="panel-url" id="url-top">channel1/</span>
+  <button class="action-btn" id="btn-edit-url" title="Edit URL path">✎</button>
+  <div id="url-edit-wrap">
+    <span id="url-prefix">live.chronomoto.com/</span>
+    <input id="url-input" type="text" placeholder="channel1/" spellcheck="false" />
+    <button id="url-confirm">↵</button>
+  </div>
   <button class="action-btn" data-reload="top">↺</button>
   <button class="action-btn" data-open="top">↗ open</button>
   <div class="divider-v"></div>
   <span class="badge badge-archive" id="archive-badge">ARCHIVE</span>
-  <span class="panel-url" id="url-bottom">live.chronomoto.com/archive</span>
   <button class="action-btn" data-reload="bottom">↺</button>
   <button class="action-btn" data-open="bottom">↗ open</button>
   <div class="sep"></div>
@@ -324,30 +364,120 @@
 <script>
   /* ── CONFIG (defaults; overridden by split-view/config.js on Pi) ── */
   const CFG = Object.assign({
-    topUrl: 'https://live.chronomoto.com/mx/',
+    topPath: 'channel1/',
     bottomUrl: 'https://live.chronomoto.com/archive',
     archiveTitle: 'ARCHIVE',
     defaultSplit: 60,
-    refreshMs: 300000, // default 5 minutes
+    refreshMs: 60000, // default 1 minute
   }, window.CHRONOMOTO_SPLIT_CONFIG || {});
 
-  const TOP_URL       = CFG.topUrl;
+  const BASE_URL      = 'https://live.chronomoto.com/';
   const BOTTOM_URL    = CFG.bottomUrl;
   const DEFAULT_SPLIT = CFG.defaultSplit;
   const ARCHIVE_REFRESH_MS = Number(CFG.refreshMs) || 300000;
   const CLOCK_ENABLED = Boolean(CFG.clockEnabled);
   /* ───────────────────────────────────────────────────────────────── */
 
+  // Current top path (e.g. "channel1/")
+  let currentTopPath = CFG.topPath || 'channel1/';
+
+  function getTopUrl(path) { return BASE_URL + (path || currentTopPath); }
+
+  function setTopPath(path, skipAutoSwitch) {
+    currentTopPath = path;
+    const fullUrl = getTopUrl(path);
+    document.getElementById('iframe-top').src = fullUrl;
+    document.getElementById('url-top').textContent = path;
+    if (!skipAutoSwitch) startNoEventCheck(path);
+  }
+
+  // ── "No active event" auto-channel switcher ──────────────────────
+  const NO_EVENT_TEXT = "There's no active event now";
+  let noEventCheckTimer = null;
+
+  function startNoEventCheck(path) {
+    clearTimeout(noEventCheckTimer);
+    // Wait for iframe to load before checking
+    noEventCheckTimer = setTimeout(() => checkForNoEvent(path), 5000);
+  }
+
+  function checkForNoEvent(path) {
+    const iframe = document.getElementById('iframe-top');
+    let text = '';
+    try { text = iframe.contentDocument && iframe.contentDocument.body ? iframe.contentDocument.body.innerText : ''; } catch(e) {}
+
+    if (text.includes(NO_EVENT_TEXT)) {
+      if (path !== 'channel2/') {
+        // Try channel2
+        setTopPath('channel2/');
+        // After load, if channel2 also has no event, fall back to channel1
+        noEventCheckTimer = setTimeout(() => {
+          let t2 = '';
+          try { t2 = document.getElementById('iframe-top').contentDocument.body.innerText; } catch(e) {}
+          if (t2.includes(NO_EVENT_TEXT)) {
+            setTopPath('channel1/', true); // fall back, skip further auto-switch
+          }
+        }, 6000);
+      }
+      // If already on channel2 and no event, just stay / fall back is handled above
+    }
+  }
+  // ─────────────────────────────────────────────────────────────────
+
+  // ── Editable URL path ────────────────────────────────────────────
+  const editBtn   = document.getElementById('btn-edit-url');
+  const editWrap  = document.getElementById('url-edit-wrap');
+  const urlInput  = document.getElementById('url-input');
+  const urlConfirm = document.getElementById('url-confirm');
+  const urlTopLabel = document.getElementById('url-top');
+
+  function openUrlEditor() {
+    urlInput.value = currentTopPath;
+    editWrap.classList.add('visible');
+    urlTopLabel.style.display = 'none';
+    editBtn.style.display = 'none';
+    urlInput.focus();
+    urlInput.select();
+  }
+
+  function commitUrlEdit() {
+    const raw = urlInput.value.trim().replace(/^\/+/, '');
+    const path = raw ? (raw.endsWith('/') ? raw : raw + '/') : 'channel1/';
+    editWrap.classList.remove('visible');
+    urlTopLabel.style.display = '';
+    editBtn.style.display = '';
+    setTopPath(path);
+  }
+
+  editBtn.addEventListener('click', openUrlEditor);
+  urlConfirm.addEventListener('click', commitUrlEdit);
+  urlInput.addEventListener('keydown', e => {
+    if (e.key === 'Enter') commitUrlEdit();
+    if (e.key === 'Escape') {
+      editWrap.classList.remove('visible');
+      urlTopLabel.style.display = '';
+      editBtn.style.display = '';
+    }
+  });
+  // ─────────────────────────────────────────────────────────────────
+
   const archiveBadge = document.getElementById('archive-badge');
   if (archiveBadge && CFG.archiveTitle) archiveBadge.textContent = CFG.archiveTitle;
 
-  document.getElementById('iframe-top').src    = TOP_URL;
+  // Init top iframe via setTopPath (triggers no-event check after load)
+  setTopPath(currentTopPath);
   document.getElementById('iframe-bottom').src = BOTTOM_URL;
-  document.getElementById('url-top').textContent    = TOP_URL.replace('https://', '');
-  document.getElementById('url-bottom').textContent = BOTTOM_URL.replace('https://', '');
+  document.getElementById('url-top').textContent = currentTopPath;
+
+  // Kick off no-event check when top iframe finishes loading
+  document.getElementById('iframe-top').addEventListener('load', () => {
+    startNoEventCheck(currentTopPath);
+  }, { once: false });
+
+  const TOP_URL = getTopUrl(); // kept for open-external reference
 
   document.querySelectorAll('[data-open]').forEach(btn => {
-    btn.addEventListener('click', () => openExternal(btn.dataset.open === 'top' ? TOP_URL : BOTTOM_URL));
+    btn.addEventListener('click', () => openExternal(btn.dataset.open === 'top' ? getTopUrl() : BOTTOM_URL));
   });
   document.querySelectorAll('[data-reload]').forEach(btn => {
     btn.addEventListener('click', () => reloadFrame(btn.dataset.reload));
