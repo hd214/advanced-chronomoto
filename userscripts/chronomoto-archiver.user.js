@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Chronomoto Archiver
 // @namespace    https://github.com/hd214/advanced-chronomoto
-// @version      2.2
+// @version      2.6
 // @description  Auto-saves race results when finished; dashboard view + CSV export.
 // @author       hd214
 // @match        https://live.chronomoto.com/*
@@ -58,30 +58,74 @@
     gmSet(STORAGE_KEY, JSON.stringify(arr));
   }
 
+  // Truncate a session title to at most 2 dash-separated segments,
+  // e.g. "Classic 4+ Kupa - Mért edzés 2 - Qualifying 2 (Qualifying)"
+  //   → "Classic 4+ Kupa - Mért edzés 2"
+  function truncateAtSecondDash(str) {
+    const parts = str.split(' - ');
+    if (parts.length <= 2) return str;
+    return parts.slice(0, 2).join(' - ');
+  }
+
+  // Session-type keywords that identify a real session name (not category tabs)
+  const SESSION_RE = /free\s*practice|qualifying|futam|race|edzés|training|warm.?up/i;
+  // Category filter tab text to ignore — short tokens like "ALL", "Classic 4", "Classic 4+"
+  const CAT_TAB_RE = /^(all|classic|formula|open|junior|senior|hobby|cup|kupa)[\s\d+]*$/i;
+
   function scrapeCategory() {
+    // 1. Look for a dedicated session-info element by common selectors
+    for (const sel of [
+      '.session-name', '.session-title', '.race-name', '.race-title',
+      '.event-name', '.event-title', '[class*="session"]', '[class*="race-info"]',
+      '[id*="session"]', '[id*="race-name"]'
+    ]) {
+      try {
+        const el = document.querySelector(sel);
+        if (el) {
+          const t = el.innerText.trim();
+          if (t.length > 3 && t.length < 300 && !CAT_TAB_RE.test(t)) {
+            return truncateAtSecondDash(t);
+          }
+        }
+      } catch(e) {}
+    }
+
+    // 2. Scan ALL text nodes / visible text for a line that contains a session keyword
+    //    AND looks like a title (has a dash separator or is reasonably long)
+    //    Exclude lines that are just category filter tabs.
     const bodyText = document.body.innerText;
+    const lines = bodyText.split(/[\n\r]+/).map(l => l.trim()).filter(Boolean);
+
+    // First pass: prefer lines that have a dash (event - session format)
+    for (const line of lines) {
+      if (line.includes(' - ') && SESSION_RE.test(line) && line.length < 300
+          && !/flag\s+status|kattints|pdf|copyright/i.test(line)) {
+        return truncateAtSecondDash(line);
+      }
+    }
+
+    // Second pass: accept session-keyword lines without a dash
+    for (const line of lines) {
+      if (SESSION_RE.test(line) && line.length > 4 && line.length < 200
+          && !CAT_TAB_RE.test(line)
+          && !/flag\s+status|kattints|pdf|copyright/i.test(line)) {
+        return line;
+      }
+    }
+
+    // 3. Try "Filter for Category" (only if non-ALL and not a tab list)
     const m1 = bodyText.match(/Filter for Category[:\s]+([^\n\r]+)/i);
     if (m1) {
       const val = m1[1].trim();
-      if (val && val.toUpperCase() !== 'ALL') return val;
-    }
-
-    const allTDs = [...document.querySelectorAll('td, th')];
-    for (const td of allTDs) {
-      const t = td.innerText.trim();
-      if (t.includes('\n') && /futam|race/i.test(t) && !/flag|kattints|pdf/i.test(t)) {
-        const lines = t.split('\n').map(l => l.trim()).filter(Boolean);
-        const catLine = lines.find(l => /futam|race/i.test(l) && !/pdf|kattints/i.test(l));
-        if (catLine) return catLine;
-      }
-      if (!t.includes('\n') && /futam|race/i.test(t) &&
-          t.length > 4 && t.length < 100 && !/flag|kattints|pdf/i.test(t)) {
-        return t;
+      if (val && val.toUpperCase() !== 'ALL' && !CAT_TAB_RE.test(val)) {
+        return truncateAtSecondDash(val);
       }
     }
 
-    const seg = window.location.pathname.replace(/\/+$/, '').split('/').pop();
-    return seg || 'Unknown';
+    // 4. Fall back: channel path + timestamp so each session is still unique
+    const seg = window.location.pathname.replace(/\/+$/, '').split('/').pop() || 'session';
+    const ts  = new Date().toISOString().slice(0, 16).replace('T', '_'); // "2026-06-13_14:16"
+    return seg + '_' + ts;
   }
 
   function scrapeFlag() {
@@ -153,9 +197,20 @@
   }
 
   let alreadySaved = new Set();
+  let lastSeenTitle = '';
 
   function checkAndSave() {
     const flag = scrapeFlag();
+
+    // Detect session change: if the page title changed, a new session has
+    // loaded — reset the saved-set so it can be captured when it finishes.
+    const currentTitle = (document.title || '').trim();
+    if (currentTitle && currentTitle !== lastSeenTitle) {
+      console.log('[Chronomoto Archiver] New session detected:', currentTitle);
+      alreadySaved.clear();
+      lastSeenTitle = currentTitle;
+    }
+
     if (!flag.toLowerCase().includes('finished')) return;
 
     const category = scrapeCategory();
@@ -296,7 +351,7 @@
           background: #0b0d14;
           color: #c0c8d8;
           font-family: Arial, Helvetica, sans-serif;
-          font-size: 13px;
+          font-size: 14px;
           min-height: 100vh;
           display: flex;
           flex-direction: column;
@@ -319,7 +374,7 @@
         table {
           width: 100%;
           border-collapse: collapse;
-          font-size: 13px;
+          font-size: 14px;
         }
         thead tr {
           background: #10131e;
@@ -334,17 +389,17 @@
           color: #0088dd;
           font-weight: bold;
           white-space: nowrap;
-          font-size: 12px;
+          font-size: 13px;
         }
         tbody tr { border-bottom: 1px solid #12151f; transition: background 0.1s; }
         tbody tr:hover { background: #ffffff07; }
         tbody td { padding: 6px 10px; color: #a0aac0; white-space: nowrap; }
 
-        td.col-pos { color: #0088dd !important; font-weight: bold; font-size: 14px; width: 44px; }
+        td.col-pos { color: #0088dd !important; font-weight: bold; font-size: 15px; width: 44px; }
         td.col-dns { color: #334466 !important; }
         td.col-no  { color: #e0e8ff !important; font-weight: bold; width: 52px; }
         td.col-driver { color: #e0e8ff !important; }
-        td.col-nat { font-size: 14px; letter-spacing: 1px; }
+        td.col-nat { font-size: 15px; letter-spacing: 1px; }
 
         tr.rank-1 td { background: #001428; }
         tr.rank-1 td.col-pos { color: #00ccff !important; }
@@ -427,7 +482,7 @@
           align-items: center;
           justify-content: center;
           color: #1e2440;
-          font-size: 12px;
+          font-size: 13px;
           text-align: center;
           padding: 20px;
           line-height: 1.6;
@@ -448,21 +503,38 @@
       return String.fromCodePoint(...[...c].map(ch => 0x1F1E6 + ch.charCodeAt(0) - 65));
     }
 
+    // Columns hidden in the archive view; data is still saved and exported via CSV
+    const HIDDEN_COLS = /^(nat\.?|vehicle|class|pic\.?)$/i;
+
     function buildTableHTML(t) {
       if (!t || !t.rows || t.rows.length === 0) return '';
       const h = t.headers || [];
-      const posIdx    = h.findIndex(x => /^pos/i.test(x));
-      const noIdx     = h.findIndex(x => /^no\.?$/i.test(x));
-      const driverIdx = h.findIndex(x => /driver/i.test(x));
-      const natIdx    = t.natHeaderIdx >= 0 ? t.natHeaderIdx
-                        : h.findIndex(x => /^nat\.?$/i.test(x));
 
-      const headHTML = h.map(hdr => `<th>${hdr}</th>`).join('');
+      // Build visibility mask: true = show this column
+      const visible = h.map(hdr => !HIDDEN_COLS.test(hdr.trim()));
+      const visibleH = h.filter((_, i) => visible[i]);
+
+      const posIdx    = visibleH.findIndex(x => /^pos/i.test(x));
+      const noIdx     = visibleH.findIndex(x => /^no\.?$/i.test(x));
+      const driverIdx = visibleH.findIndex(x => /driver/i.test(x));
+
+      // Map original natHeaderIdx to its position among visible columns
+      const origNatIdx = t.natHeaderIdx >= 0 ? t.natHeaderIdx
+                         : h.findIndex(x => /^nat\.?$/i.test(x));
+      let natIdx = -1;
+      if (origNatIdx >= 0 && visible[origNatIdx]) {
+        let vi = 0;
+        for (let i = 0; i < origNatIdx; i++) { if (visible[i]) vi++; }
+        natIdx = vi;
+      }
+
+      const headHTML = visibleH.map(hdr => `<th>${hdr}</th>`).join('');
       const bodyHTML = t.rows.map((row, ri) => {
-        const posVal = posIdx >= 0 ? (row[posIdx] || '') : '';
+        const visibleRow = row.filter((_, i) => visible[i]);
+        const posVal = posIdx >= 0 ? (visibleRow[posIdx] || '') : '';
         const isDNS  = /dns|dnf|dsq/i.test(posVal);
         const rankCls = isDNS ? '' : (['rank-1','rank-2','rank-3'][ri] || '');
-        const cells = row.map((cell, ci) => {
+        const cells = visibleRow.map((cell, ci) => {
           let cls = '';
           let display = cell;
           if      (ci === posIdx)    cls = isDNS ? 'col-pos col-dns' : 'col-pos';
